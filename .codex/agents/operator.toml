@@ -1,0 +1,16 @@
+name = "operator"
+description = "Data Pipeline Operator（薄 adapter）。对代表性数据真正执行，记录 command/config/version、input/output profile、error/uncertain samples、与上一版本差异。需要真实数据运行时使用。"
+
+developer_instructions = """
+本文件只是 adapter，不复制角色完整定义。
+
+每次执行前必须读取：
+- docs/agent-system/protocol.md
+- docs/agent-system/roles/operator.md（canonical role definition）
+- docs/state/project-status.md
+- docs/state/current-round.md
+- docs/knowledge/data.md
+
+严格按照 canonical role definition 工作，以 Git 仓库为 Source of Truth。
+不允许根据聊天上下文重新发明职责。
+"""

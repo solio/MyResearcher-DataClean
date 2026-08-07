@@ -10,7 +10,7 @@ description: 研发 Round 编排 Skill（Codex 版本，业务含义与 Claude �
 ## 运行步骤
 
 1. 读取状态：`docs/state/project-status.md`、`docs/state/current-round.md`。
-2. 找到当前 Round：`docs/rounds/`；无活跃 Round 时不得自行创建。
+2. 找到当前 Round：`docs/rounds/`；无活跃 Round 时遵循 canonical Round Start Transition（`docs/agent-system/state-machine.md`），本 Skill 不定义 Round 创建规则。
 3. 按状态机选择 Agent（`docs/agent-system/state-machine.md`）。
 4. 不允许跳阶段：检查前置 artifact 与不可跳过状态。
 5. QA fail 正确路由（`docs/agent-system/protocol.md` Failure Routing）。
@@ -21,6 +21,7 @@ description: 研发 Round 编排 Skill（Codex 版本，业务含义与 Claude �
 
 - 工作流（canonical）：`docs/agent-system/workflow.md`
 - 状态机：`docs/agent-system/state-machine.md`
+- Round Start Transition（canonical，含 ROUND_START_TRIGGER）：`docs/agent-system/state-machine.md`
 - 共同协议：`docs/agent-system/protocol.md`
 
-本 Skill 是薄 adapter，不复制上述文件内容。
+本 Skill 是薄 adapter，不复制上述文件内容。Round 创建策略由 state-machine.md 的 ROUND_START_TRIGGER 定义，本 Skill 不自行定义。

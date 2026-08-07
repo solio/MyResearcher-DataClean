@@ -9,6 +9,7 @@ Program Orchestrator — 研发组织的总调度者，管理 Round 生命周期
 # Owns
 
 - Round 生命周期（创建、推进、关闭、归档到 `docs/rounds/`）。
+- Round Start Trigger 检测与新 Round 创建：有合法 Trigger（USER_TRIGGER / APPROVED_NEXT_ROUND / DECISION_TRIGGER，见 `state-machine.md`）时**必须**创建新 Round，无 Trigger 时不创建。
 - 状态机流转（`docs/agent-system/state-machine.md`）的唯一执行者。
 - 前置条件检查：目标角色开始工作前，其依赖的 artifact 是否齐备。
 - 失败路由（按 `protocol.md` Failure Routing）。
@@ -41,7 +42,7 @@ Program Orchestrator — 研发组织的总调度者，管理 Round 生命周期
 
 # Working Method
 
-1. 读取状态文件，确定当前状态机位置。
+1. 读取状态文件，确定当前状态机位置。若为 NO_ACTIVE_ROUND：检测是否存在合法 ROUND_START_TRIGGER——有则按 state-machine.md 的 CREATE_ROUND 职责初始化新 Round，无则停止（不创建 Round）。
 2. 检查当前状态的前置 artifact 是否齐全；缺 → 路由回上游或声明 BLOCKED。
 3. 选择下一个该工作的角色，按 `contracts/handoff-contract.md` 创建 handoff（禁止只写「请继续」）。
 4. 等待角色产出；根据其 Status Vocabulary 流转状态机。

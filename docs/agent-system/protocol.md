@@ -75,6 +75,15 @@
 
 普通技术实现问题不得频繁请求用户。
 
+## Round Start 权限（治理补充）
+
+新 Round 的创建只属于 Program Orchestrator，且只能通过 canonical ROUND_START_TRIGGER 转移执行。完整规则（三类 Trigger、MUST 语义、CREATE_ROUND 职责）见 `state-machine.md`，本文件不复制。
+
+- 用户明确要求启动研发即构成合法 Trigger（USER_TRIGGER），用户不需要手工创建 Round 文件。
+- 其他角色无权创建 Round。
+- 无合法 Trigger 时保持 NO_ACTIVE_ROUND，正常停止，不得自行启动研发。
+- Phase 0 Bootstrap 本身不是 Trigger。
+
 ## 相关契约
 
 - 证据契约：`contracts/evidence-contract.md`

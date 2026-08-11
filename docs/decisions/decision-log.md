@@ -15,6 +15,9 @@
 | D-007 | 2026-08-11 | DataClean 只负责 RAW -> CLEAN，刻意保持 semantic ignorance | sentiment/stance/finance interpretation 属于下游；语义驱动清理可能误删有效文本 | ACTIVE | CONFIRMED（用户边界 + Collector contract） |
 | D-008 | 2026-08-11 | 普通 Round 使用 Orchestrator/Developer/QA core，其他角色按风险调用 | 治理必须与轻量数据工程规模匹配；未触发 specialist 不应制造 gate | ACTIVE | CONFIRMED（用户指令） |
 | D-009 | 2026-08-11 | ROUND-001 读取 Collector SQLite v1/v2 的 immutable observation/evidence 共同子集，不发明另一套 RAW envelope | v2 只新增 raw retention state，核心 observation/evidence 字段兼容；DataClean 保留 storage/schema versions 与 lineage | ACTIVE | CONFIRMED（CODE_INSPECTION + integration test） |
+| D-010 | 2026-08-11 | ROUND-001 的 record identity 只基于 Collector immutable `observation_id`；exact-content key 仅是 relationship/group，不用于 reject 不同 observation | content equality 不等于 observation occurrence/identity equality；按内容驱逐会不可逆地丢失 source item、occurrence 与 lineage | ACTIVE | CONFIRMED（Collector schema CODE_INSPECTION + EXTERNAL_REVIEW） |
+| D-011 | 2026-08-11 | HTML normalization 对未证明安全的 markup preserve-by-default，`del/s/strike` 保留可恢复 markers，不建 rich-text AST | 只保留内部文本会消除删除/划除关系；可见 markers 是 ROUND-001 内最小可回放方案 | ACTIVE | CONFIRMED（EXTERNAL_REVIEW + CODE_INSPECTION） |
+| D-012 | 2026-08-11 | 已通过 validation 的 non-CLEAN outcome 保留 full available Collector lineage，`INVALID_RECORD` 仅作 best-effort | validation 后已拥有完整 lineage 事实，不应因 cleaning outcome 丢失；无效输入则不能补造 | ACTIVE | CONFIRMED（EXTERNAL_REVIEW + CODE_INSPECTION） |
 
 ## 追加记录规则
 

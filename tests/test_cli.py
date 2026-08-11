@@ -29,7 +29,13 @@ def test_cli_writes_replayable_outputs_and_required_report_counts(
     assert report["unchanged_count"] == 0
     assert report["modified_count"] == 1
     assert report["rejected_count"] == 0
-    assert report["duplicate_count"] == 0
+    assert report["exact_content_duplicate_count"] == 0
     assert report["reason_distribution"] == {}
+    assert report["input_count"] == report["cleaned_count"] + report["rejected_count"]
+    assert report["cleaned_count"] == (
+        report["unchanged_count"] + report["modified_count"]
+    )
+    assert report["exact_content_duplicate_count"] <= report["cleaned_count"]
+    assert sum(report["reason_distribution"].values()) == report["rejected_count"]
     assert len(report["input_database_sha256"]) == 64
     assert len(report["input_records_sha256"]) == 64

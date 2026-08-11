@@ -1,8 +1,12 @@
 # ROUND-001 Risk-based Technical Review
 
+> 状态：**SUPERSEDED — 2026-08-11 Correction Pass**
+>
+> 原因：外部 review 证明本报告错误接受了“content equality 即 record duplicate”的 rejection 语义，也未覆盖 `del/s/strike` meaning-bearing markup 丢失以及 post-validation rejection full-lineage 缺口。本文件保留为历史证据，不再构成任何 PASS 或 capability evidence。替代结论必须写入新的 `technical-review-correction.md`。
+
 Trigger：core pipeline、exact dedup、lineage/replayability change。
 
-结论：**REVIEW_PASS_FOR_IMPLEMENTATION；ROUND 仍被 AC-8 阻塞**。
+历史结论：~~REVIEW_PASS_FOR_IMPLEMENTATION~~（已 supersede）。
 
 Evidence Level：`CONFIRMED — CODE_INSPECTION + TEST`（2026-08-11）。
 

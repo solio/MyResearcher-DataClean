@@ -40,28 +40,33 @@ _BLOCK_TAGS = {
     "tr",
     "ul",
 }
-_INLINE_TAGS = {
-    "a",
-    "abbr",
+_SAFE_PRESENTATION_TAGS = {
     "b",
     "big",
-    "cite",
-    "code",
-    "del",
     "em",
     "font",
     "i",
-    "ins",
-    "mark",
-    "s",
     "small",
     "span",
-    "strike",
     "strong",
-    "sub",
-    "sup",
-    "time",
     "u",
+}
+_MEANING_BEARING_TAGS = {"del", "s", "strike"}
+_VOID_TAGS = {
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
 }
 _HORIZONTAL_SPACE = re.compile(r"[\t\f\v \u00a0\u2000-\u200a\u202f\u205f\u3000]+")
 
@@ -73,61 +78,68 @@ class NormalizedText:
 
 
 class _ConservativeHTMLTextExtractor(HTMLParser):
-    """Remove known markup while preserving unknown angle-bracket text."""
+    """Apply the narrow HTML policy while preserving unproved structure."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
-        self._anchors: list[tuple[str | None, int]] = []
+        self._open_tags: list[tuple[str, str]] = []
+
+    def _remember(self, tag: str, mode: str) -> None:
+        if tag not in _VOID_TAGS:
+            self._open_tags.append((tag, mode))
+
+    def _take_mode(self, tag: str) -> str | None:
+        for index in range(len(self._open_tags) - 1, -1, -1):
+            if self._open_tags[index][0] == tag:
+                _, mode = self._open_tags.pop(index)
+                return mode
+        return None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         lowered = tag.lower()
-        attributes = dict(attrs)
-        if lowered == "br":
+        raw_tag = self.get_starttag_text() or f"<{tag}>"
+        if lowered == "br" and not attrs:
             self.parts.append("\n")
-        elif lowered == "img":
-            alt = attributes.get("alt")
-            if alt:
-                self.parts.append(alt)
-            source = attributes.get("src")
-            if source and source.startswith(("http://", "https://")):
-                self.parts.append(f" ({source})" if alt else source)
-        elif lowered in _BLOCK_TAGS:
+        elif lowered in _BLOCK_TAGS and not attrs:
             self.parts.append("\n")
-        elif lowered == "a":
-            self._anchors.append((attributes.get("href"), len(self.parts)))
-        elif lowered not in _INLINE_TAGS:
-            self.parts.append(self.get_starttag_text() or f"<{tag}>")
+            self._remember(lowered, "layout")
+        elif lowered in _SAFE_PRESENTATION_TAGS and not attrs:
+            self._remember(lowered, "presentation")
+        else:
+            # Meaning-bearing tags, tags with unproved attributes, and all
+            # unknown tags retain a visible/recoverable marker.
+            self.parts.append(raw_tag)
+            mode = "preserved_layout" if lowered in _BLOCK_TAGS else "preserved"
+            if mode == "preserved_layout":
+                self.parts.append("\n")
+            self._remember(lowered, mode)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         lowered = tag.lower()
-        if lowered == "br":
+        if lowered == "br" and not attrs:
             self.parts.append("\n")
-        elif lowered == "img":
-            attributes = dict(attrs)
-            alt = attributes.get("alt")
-            if alt:
-                self.parts.append(alt)
-            source = attributes.get("src")
-            if source and source.startswith(("http://", "https://")):
-                self.parts.append(f" ({source})" if alt else source)
-        elif lowered in _BLOCK_TAGS:
+        elif lowered in _BLOCK_TAGS and not attrs:
             self.parts.append("\n")
-        elif lowered not in _INLINE_TAGS:
+        elif lowered in _SAFE_PRESENTATION_TAGS and not attrs:
+            return
+        else:
             self.parts.append(self.get_starttag_text() or f"<{tag}/>")
 
     def handle_endtag(self, tag: str) -> None:
         lowered = tag.lower()
-        if lowered == "a":
-            href, start = (
-                self._anchors.pop() if self._anchors else (None, len(self.parts))
-            )
-            anchor_text = "".join(self.parts[start:])
-            if href and href not in anchor_text:
-                self.parts.append(f" ({href})" if anchor_text.strip() else href)
-        elif lowered in _BLOCK_TAGS:
+        mode = self._take_mode(lowered)
+        if mode == "layout":
             self.parts.append("\n")
-        elif lowered not in _INLINE_TAGS and lowered not in {"br", "img"}:
+        elif mode == "presentation":
+            return
+        elif mode == "preserved_layout":
+            self.parts.append("\n")
+            self.parts.append(f"</{tag}>")
+        elif mode == "preserved" or lowered in _MEANING_BEARING_TAGS:
+            self.parts.append(f"</{tag}>")
+        elif lowered not in _VOID_TAGS:
+            # An unmatched end tag cannot be proven to be presentation-only.
             self.parts.append(f"</{tag}>")
 
     def handle_data(self, data: str) -> None:
@@ -143,6 +155,15 @@ class _ConservativeHTMLTextExtractor(HTMLParser):
 
     def handle_comment(self, data: str) -> None:
         del data
+
+    def handle_decl(self, decl: str) -> None:
+        self.parts.append(f"<!{decl}>")
+
+    def handle_pi(self, data: str) -> None:
+        self.parts.append(f"<?{data}>")
+
+    def unknown_decl(self, data: str) -> None:
+        self.parts.append(f"<![{data}]>")
 
     def result(self) -> str:
         return "".join(self.parts)

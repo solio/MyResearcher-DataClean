@@ -144,12 +144,31 @@ def _validation_errors(record: Any) -> list[str]:
 
 def _available_lineage(record: Any) -> dict[str, Any]:
     if not isinstance(record, Mapping):
-        return {"observation_id": None, "raw_evidence": []}
+        return {
+            "observation_id": None,
+            "source": None,
+            "source_item_id": None,
+            "observation_version": None,
+            "collector_storage_version": None,
+            "collector_schema_version": None,
+            "collector_version": None,
+            "parser_version": None,
+            "fact_fingerprint": None,
+            "drift_from_observation_id": None,
+            "raw_evidence": [],
+            "scopes": [],
+        }
     return {
         "observation_id": record.get("observation_id"),
         "source": record.get("source"),
         "source_item_id": record.get("source_item_id"),
         "observation_version": record.get("observation_version"),
+        "collector_storage_version": record.get("collector_storage_version"),
+        "collector_schema_version": record.get("schema_version"),
+        "collector_version": record.get("collector_version"),
+        "parser_version": record.get("parser_version"),
+        "fact_fingerprint": record.get("fact_fingerprint"),
+        "drift_from_observation_id": record.get("drift_from_observation_id"),
         "raw_evidence": copy.deepcopy(record.get("raw_evidence", [])),
         "scopes": copy.deepcopy(record.get("scopes", [])),
     }
@@ -158,6 +177,8 @@ def _available_lineage(record: Any) -> dict[str, Any]:
 def _full_lineage(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "observation_id": record["observation_id"],
+        "source": record["source"],
+        "source_item_id": record["source_item_id"],
         "observation_version": record["observation_version"],
         "collector_storage_version": record.get("collector_storage_version"),
         "collector_schema_version": record["schema_version"],
@@ -189,7 +210,7 @@ def _rejection(
     rules: list[str] | None = None,
     input_digest: str | None = None,
     output_digest: str | None = None,
-    duplicate_of: str | None = None,
+    full_lineage: bool = False,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "reason": reason,
@@ -198,7 +219,7 @@ def _rejection(
         "rules_applied": rules or [],
         "input_text_sha256": input_digest,
         "output_text_sha256": output_digest,
-        "lineage": _available_lineage(record),
+        "lineage": _full_lineage(record) if full_lineage else _available_lineage(record),
     }
     if isinstance(record, Mapping):
         result["record_metadata"] = {
@@ -209,8 +230,6 @@ def _rejection(
             "url": record.get("url"),
             "source_metadata": copy.deepcopy(record.get("source_metadata")),
         }
-    if duplicate_of is not None:
-        result["duplicate_of"] = duplicate_of
     return result
 
 
@@ -222,7 +241,8 @@ def _clean_record(
     rules: list[str],
     input_digest: str,
     output_digest: str,
-    duplicate_key: str,
+    exact_content_key: str,
+    duplicate_content_of: str | None,
 ) -> dict[str, Any]:
     clean_id = _sha256(
         {
@@ -267,18 +287,36 @@ def _clean_record(
             "rules_applied": rules,
             "input_text_sha256": input_digest,
             "output_text_sha256": output_digest,
-            "exact_duplicate_key": duplicate_key,
+            "exact_content_key": exact_content_key,
+            "duplicate_content_of": duplicate_content_of,
         },
     }
+
+
+def _require_unique_observation_ids(records: list[Any]) -> None:
+    seen: set[str] = set()
+    for record in records:
+        if not isinstance(record, Mapping):
+            continue
+        observation_id = record.get("observation_id")
+        if not _is_nonempty_string(observation_id):
+            continue
+        if observation_id in seen:
+            raise ValueError(
+                f"duplicate observation_id violates the input contract: {observation_id}"
+            )
+        seen.add(observation_id)
 
 
 def clean_records(records: Iterable[Mapping[str, Any]]) -> CleaningResult:
     """Clean one deterministic ordered batch and retain all rejection reasons."""
 
     inputs = list(records)
+    _require_unique_observation_ids(inputs)
     clean: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
-    duplicate_first: dict[str, str] = {}
+    exact_content_first: dict[str, str] = {}
+    exact_content_duplicate_count = 0
     unchanged = 0
     modified = 0
 
@@ -320,24 +358,13 @@ def clean_records(records: Iterable[Mapping[str, Any]]) -> CleaningResult:
                     rules=rules,
                     input_digest=input_digest,
                     output_digest=output_digest,
+                    full_lineage=True,
                 )
             )
             continue
 
-        duplicate_key = output_digest
-        if duplicate_key in duplicate_first:
-            rejected.append(
-                _rejection(
-                    record,
-                    "EXACT_DUPLICATE",
-                    detail="normalized title and content exactly match an earlier batch record",
-                    rules=rules,
-                    input_digest=input_digest,
-                    output_digest=output_digest,
-                    duplicate_of=duplicate_first[duplicate_key],
-                )
-            )
-            continue
+        exact_content_key = output_digest
+        duplicate_content_of = exact_content_first.get(exact_content_key)
 
         output = _clean_record(
             record,
@@ -346,14 +373,18 @@ def clean_records(records: Iterable[Mapping[str, Any]]) -> CleaningResult:
             rules=rules,
             input_digest=input_digest,
             output_digest=output_digest,
-            duplicate_key=duplicate_key,
+            exact_content_key=exact_content_key,
+            duplicate_content_of=duplicate_content_of,
         )
-        duplicate_first[duplicate_key] = output["clean_id"]
-        clean.append(output)
-        if rules:
-            modified += 1
+        if duplicate_content_of is None:
+            exact_content_first[exact_content_key] = output["clean_id"]
         else:
+            exact_content_duplicate_count += 1
+        clean.append(output)
+        if input_digest == output_digest:
             unchanged += 1
+        else:
+            modified += 1
 
     reasons = Counter(item["reason"] for item in rejected)
     report = {
@@ -363,8 +394,16 @@ def clean_records(records: Iterable[Mapping[str, Any]]) -> CleaningResult:
         "cleaned_count": len(clean),
         "unchanged_count": unchanged,
         "modified_count": modified,
+        "exact_content_duplicate_count": exact_content_duplicate_count,
         "rejected_count": len(rejected),
-        "duplicate_count": reasons.get("EXACT_DUPLICATE", 0),
         "reason_distribution": dict(sorted(reasons.items())),
     }
+    if not (
+        report["input_count"] == report["cleaned_count"] + report["rejected_count"]
+        and report["cleaned_count"]
+        == report["unchanged_count"] + report["modified_count"]
+        and report["exact_content_duplicate_count"] <= report["cleaned_count"]
+        and sum(report["reason_distribution"].values()) == report["rejected_count"]
+    ):
+        raise RuntimeError("internal report count invariant failed")
     return CleaningResult(clean, rejected, report)

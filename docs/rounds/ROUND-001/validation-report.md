@@ -1,6 +1,13 @@
 # ROUND-001 Validation Report
 
-状态：**QA_PASS / REAL_DATA_BLOCKED** ｜ 2026-08-11
+状态：**SUPERSEDED — HISTORICAL PRE-CORRECTION EVIDENCE** ｜ 2026-08-11
+
+> 本报告的 12-test PASS 依赖了错误的 exact-content rejection 语义，且未覆盖
+> meaning-bearing HTML 与完整 rejection lineage，不再构成当前 QA、Technical
+> Review 或 capability evidence。本文件不删除，用于保留历史与失败模式；替代证据为
+> `qa-correction-report.md` 与 `technical-review-correction.md`。
+
+原阶段性结论：~~QA_PASS / REAL_DATA_BLOCKED~~（已 supersede）。
 
 ## Executed evidence
 

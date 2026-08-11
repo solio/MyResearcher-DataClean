@@ -1,7 +1,8 @@
-# Acceptance Report — <Finance / Sentiment / Data Architect>
+# Specialist Acceptance Report — <invoked role>
 
 > Round：ROUND-<NNN> ｜ 专家角色：<Role> ｜ 日期：<YYYY-MM-DD>
-> 依据：<执行报告路径 + 真实样本路径>（只基于真实输出，不基于代码或 pytest）
+> Trigger：<为何当前 Round 调用该 specialist>
+> 依据：<执行报告/样本/contract 路径>
 
 ## 独立验收意见
 
@@ -13,7 +14,7 @@
 
 ## 拒绝的问题（如适用）
 
-| 问题 | 类型（需求/领域/标签/架构/实现/数据/研究假设失败） | 证据 | 建议路由 |
+| 问题 | 类型（contract/rule/architecture/implementation/data/preservation） | 证据 | 建议路由 |
 | --- | --- | --- | --- |
 | <描述> | <类型> | <样本 ID / 统计> | <目标角色> |
 

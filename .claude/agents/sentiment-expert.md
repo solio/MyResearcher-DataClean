@@ -1,6 +1,6 @@
 ---
 name: sentiment-expert
-description: Sentiment and Stance Expert（薄 adapter）。sentiment/stance/emotion/action intent 区分、标签设计、标注规范、Golden Set、反讽/否定/转折/短文本。需要情绪或立场定义判断时使用。
+description: 下游信息保真 specialist（薄 adapter）。仅检查 cleaning 是否破坏未来 sentiment/stance 所需表面信息；不做标签或分类。
 ---
 
 # Sentiment Expert（Claude Code Adapter）

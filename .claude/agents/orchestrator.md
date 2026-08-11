@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Program Orchestrator（薄 adapter）。管理 Round 生命周期与状态机、路由失败、判断 Round Close。需要推进或启动研发 Round 时使用。
+description: Lean DataClean Round owner（薄 adapter）。用 Orchestrator/Developer/QA core 推进 Round，只按风险触发 specialist。
 ---
 
 # Orchestrator（Claude Code Adapter）

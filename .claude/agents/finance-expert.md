@@ -1,6 +1,6 @@
 ---
 name: finance-expert
-description: Financial Domain Expert（薄 adapter）。A 股社区语言、散户行为、看多/看空财经含义、拥挤度、未来数据泄漏检查。需要财经领域判断时使用。
+description: 财经语义保真 specialist（薄 adapter）。仅在 cleaning rule 可能破坏财经原文时提供反例；不分类、不参与普通 Round。
 ---
 
 # Finance Expert（Claude Code Adapter）

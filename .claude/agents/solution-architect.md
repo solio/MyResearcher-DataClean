@@ -1,6 +1,6 @@
 ---
 name: solution-architect
-description: Requirements and Solution Architect（薄 adapter）。整合三专家结论为需求、Acceptance Criteria、Out of Scope、架构、Data Contract、Slice；专家冲突时设计实验解决。需要需求或架构设计时使用。
+description: 按需 Solution Architect（薄 adapter）。仅处理多模块、pipeline、infrastructure 或 cross-round 设计；简单 cleaning rule 不调用。
 ---
 
 # Solution Architect（Claude Code Adapter）
@@ -15,8 +15,6 @@ description: Requirements and Solution Architect（薄 adapter）。整合三专
 - `docs/agent-system/workflow.md`
 - `docs/state/project-status.md`
 - `docs/state/current-round.md`
-- `docs/knowledge/finance.md`
-- `docs/knowledge/sentiment.md`
 - `docs/knowledge/data.md`
 - `docs/knowledge/glossary.md`
 

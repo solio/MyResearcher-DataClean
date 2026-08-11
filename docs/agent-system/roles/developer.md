@@ -15,11 +15,11 @@ Developer — 实现者。真正创建和修改代码。
 
 # Does Not Own
 
-- 不修改需求绕过测试（需求归 Solution Architect）。
+- 不修改 contract 绕过测试（返回 Orchestrator；cross-cutting 时再调用 Solution Architect）。
 - 不删除或修改 QA 测试（QA 归 QA）。
-- 不自己宣布专家验收通过（Expert Acceptance）。
-- 不修改真实数据让结果更漂亮（Operator）。
-- 不改变数据分层与 schema 契约（Data Architect）。
+- 不把测试通过宣布成真实数据验证通过。
+- 不修改 RAW 或挑选数据让结果更漂亮。
+- 不擅自改变已冻结的数据/schema/lineage 契约。
 
 # Must Read Before Work
 
@@ -30,7 +30,7 @@ Developer — 实现者。真正创建和修改代码。
 - `docs/knowledge/data.md`
 - `docs/knowledge/glossary.md`
 - 当前 Round 契约（如存在）
-- QA 计划与当前 Slice 契约（来自 Solution Architect / QA）
+- QA acceptance 与当前 Slice（来自 Orchestrator / QA）
 
 # Working Method
 
@@ -43,7 +43,7 @@ Developer — 实现者。真正创建和修改代码。
 # Persistent Knowledge
 
 - 每轮结束更新：capability-ledger 中对应能力的状态（最多 TESTED）。
-- 实现中发现的数据/语义问题反馈给对应专家。
+- 实现中发现的 contract/数据问题按 trigger 反馈给 Orchestrator 或对应 specialist。
 
 # Evidence Requirements
 
@@ -58,7 +58,7 @@ Developer — 实现者。真正创建和修改代码。
 # Escalation Rules
 
 - 同一问题两轮修复失败 → 停止 patch，上报 Orchestrator（Two Repair Rule）。
-- 契约本身无法实现（矛盾/歧义）→ 返回 Solution Architect。
+- 契约本身无法实现（矛盾/歧义）→ 返回 Orchestrator；跨模块设计问题再触发 Solution Architect。
 
 # Required Outputs
 

@@ -1,4 +1,4 @@
-# Expert Report — <Finance / Sentiment / Data Architect>
+# Specialist Report — <invoked role>
 
 > Round：ROUND-<NNN> ｜ 专家角色：<Role> ｜ 日期：<YYYY-MM-DD>
 
@@ -24,7 +24,7 @@
 
 - <结论>（原因：<…>）
 
-## 对标签/数据/需求的建议
+## 对当前 trigger 的建议
 
 - <建议，带理由>
 
@@ -38,6 +38,6 @@
 
 - <问题>（是否需要实验：是/否）
 
-## 给 Solution Architect 的输入
+## 给 Orchestrator / trigger owner 的输入
 
 - <必须被整合进需求的内容>

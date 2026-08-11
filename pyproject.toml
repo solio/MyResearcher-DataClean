@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myresearcher-dataclean"
+version = "0.1.0"
+description = "Deterministic, traceable RAW to CLEAN baseline for MyResearcher Collector data"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+myresearcher-dataclean = "myresearcher_dataclean.cli:main"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]

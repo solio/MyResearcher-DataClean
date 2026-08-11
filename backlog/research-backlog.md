@@ -1,25 +1,26 @@
-# Research Backlog
+# DataClean Backlog
 
-候选研究方向登记处。**只登记，不执行，不排序。**
-纳入哪个 Round、如何排序，由 Orchestrator 与 Solution Architect 决定；状态默认 CANDIDATE。
+只登记属于 RAW -> CLEAN 边界的候选工作；不在此重新承担 source access/crawling，也不登记下游 sentiment/label/analyze 研发。
 
-| ID | 研究方向 | 提出者 | 状态 | 备注 |
-| --- | --- | --- | --- | --- |
-| RB-001 | 数据源画像：股吧/雪球/微博 各自结构、规模、时间范围、访问方式 | Bootstrap | CANDIDATE | 其他方向的前置 |
-| RB-002 | RAW schema 设计 | Bootstrap | CANDIDATE | 依赖 RB-001 |
-| RB-003 | 标签定义（立场 / 情绪 / 行为意图） | Bootstrap | CANDIDATE | 需 Sentiment Expert |
-| RB-004 | Golden Set 建设 | Bootstrap | CANDIDATE | 需 Sentiment Expert + QA |
-| RB-005 | 短文本处理 | Bootstrap | CANDIDATE | |
-| RB-006 | 引用拆分（引用 vs 作者评论） | Bootstrap | CANDIDATE | |
-| RB-007 | 重复传播检测 | Bootstrap | CANDIDATE | |
-| RB-008 | Spam / 水军 / 广告 / 喊单检测 | Bootstrap | CANDIDATE | |
-| RB-009 | 散户立场 baseline（规则或最小模型） | Bootstrap | CANDIDATE | |
-| RB-010 | 聚合指标（热度 / 多空分歧 / 拥挤度） | Bootstrap | CANDIDATE | 需 Finance Expert 验证财经意义 |
+| ID | DataClean 方向 | 状态 | 备注 |
+| --- | --- | --- | --- |
+| RB-001 | 不同 Collector source 的 RAW record 特征如何影响清洗 | CANDIDATE | 研究输入差异，不研究访问或爬取 |
+| RB-002 | Collector RAW -> CLEAN schema、record identity 与 lineage | IN_ROUND | ROUND-001 |
+| RB-005 | 短文本的结构保真清理 | CANDIDATE | 不判断语义或价值 |
+| RB-006 | 正文 / 引用 / 转发内容的结构保持 | CANDIDATE | 不做 stance/label |
+| RB-007 | exact duplicate 后的基础 near-duplicate 可行性 | CANDIDATE | ROUND-001 只做 exact；禁止 embedding/ML 扩张 |
+| RB-011 | HTML/entity/encoding/whitespace 最小确定性 baseline | IN_ROUND | ROUND-001 |
+| RB-012 | reject/drop reason taxonomy 与审计报告 | IN_ROUND | ROUND-001 |
 
-## 状态词汇
+## 从 DataClean 移出的 Bootstrap 条目
 
-- CANDIDATE（候选，未进入任何 Round）
-- IN_QUEUE（已被排入未来 Round）
-- IN_ROUND（正在某 Round 中执行）
-- DONE（完成并验收）
-- REJECTED（被否定，记录原因）
+| 原 ID | 原方向 | 归属/处理 | 状态 |
+| --- | --- | --- | --- |
+| RB-001（原） | 股吧/雪球/微博访问方式与采集画像 | MyResearcher-DataCollector | TRANSFERRED |
+| RB-003 | 立场/情绪/行为意图标签 | DataLabel / Sentiment | TRANSFERRED |
+| RB-004 | sentiment Golden Set | DataLabel / Sentiment | TRANSFERRED |
+| RB-008 | Spam/水军/广告/喊单语义检测 | 下游 Analyze/专项质量项目；不在本轮 | TRANSFERRED |
+| RB-009 | 散户立场 baseline | Sentiment / Analyze | TRANSFERRED |
+| RB-010 | 热度/多空分歧/拥挤度 | Analyze | TRANSFERRED |
+
+状态：`CANDIDATE` / `IN_QUEUE` / `IN_ROUND` / `DONE` / `REJECTED` / `TRANSFERRED`。

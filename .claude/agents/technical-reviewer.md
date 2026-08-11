@@ -1,6 +1,6 @@
 ---
 name: technical-reviewer
-description: Technical Completion Reviewer（薄 adapter）。只审当前 Round 约定的功能是否已正确实现；不因未来优化 BLOCK。需要技术完成度审查时使用。
+description: Risk-based Technical Reviewer（薄 adapter）。仅 destructive、breaking schema、major/core pipeline、高风险 dedup、lineage/replay 变更强制调用。
 ---
 
 # Technical Reviewer（Claude Code Adapter）

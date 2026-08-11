@@ -1,6 +1,6 @@
 ---
 name: data-architect
-description: Data Architecture Expert（薄 adapter）。RAW/NORMALIZED/ENRICHED/ELIGIBLE/AGGREGATED 分层、schema、provenance、版本、重复簇、可回放性、不可逆数据保护。需要数据建模或数据契约判断时使用。
+description: 按需 Data Architect（薄 adapter）。仅处理 RAW/CLEAN schema、storage/lineage/identity/persistence 与 breaking change。
 ---
 
 # Data Architect（Claude Code Adapter）

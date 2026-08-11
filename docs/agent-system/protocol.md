@@ -1,91 +1,58 @@
 # Protocol — 共同协议
 
-本文档是全项目共同协议（canonical）。所有角色、所有执行器都必须遵守。
-
 ## Evidence Levels
-
-所有关键结论必须标记以下级别之一：
 
 | Level | 含义 |
 | --- | --- |
 | CONFIRMED | 已被真实数据、人工检查或可复现实验确认。 |
-| PROVISIONAL | 有部分支持，但尚未被严格验证；允许作为工作假设使用，必须可被推翻。 |
-| HYPOTHESIS | 仅是基于经验或直觉的假设，没有任何项目内证据。 |
-| REJECTED | 已被证据否定；必须记录原因，防止再次提出。 |
+| PROVISIONAL | 有部分支持，可作工作假设但仍可被推翻。 |
+| HYPOTHESIS | 没有项目内证据的假设。 |
+| REJECTED | 已被证据否定；保留原因避免重复。 |
 
-规则：
-
-- 标记必须与 `docs/decisions/decision-log.md`、`docs/knowledge/`、Round 报告保持一致。
-- 未标注证据级别的结论一律视为 HYPOTHESIS。
-- 结论必须说明证据来源（见 `contracts/evidence-contract.md`）。
+关键结论必须注明证据类型与来源（见 `contracts/evidence-contract.md`）；未标注的一律视为 HYPOTHESIS。
 
 ## Capability Maturity
 
-所有项目能力必须标记以下成熟度之一：
-
 | Maturity | 含义 |
 | --- | --- |
-| PROPOSED | 只是提案，无实现。 |
-| PROTOTYPE | 有原型实现，未经系统测试。 |
-| TESTED | 代码完成且通过单元/集成测试。 |
-| DATA_VALIDATED | 在真实数据上运行并验证过。 |
-| EXPERT_ACCEPTED | 经过领域专家验收。 |
+| PROPOSED | 有契约，无实现。 |
+| PROTOTYPE | 有原型，未完成系统测试。 |
+| TESTED | 通过单元/集成验收。 |
+| DATA_VALIDATED | 用真实 Collector record 执行并完成人工抽样。 |
+| EXPERT_ACCEPTED | 当前能力确实需要且已经完成领域专家验收。 |
 
-规则：
-
-- **代码完成最多进入 TESTED。**
-- **真实数据运行之后才能进入 DATA_VALIDATED。**
-- **专家验收之后才能进入 EXPERT_ACCEPTED。**
-- 任何人不允许跳级声明能力。
+- 代码与 synthetic fixture 最多支持 `TESTED`。
+- `DATA_VALIDATED` 必须有可复现命令、版本、统计和真实样本抽查。
+- `EXPERT_ACCEPTED` 不是普通 DataClean Round 的默认目标或关闭前提。
 
 ## Failure Routing
 
-所有失败按类型路由，**不得一律交给 Developer 打补丁**：
-
 | 失败类型 | 路由到 |
 | --- | --- |
-| 需求语义问题 | Domain Experts（Finance / Sentiment / Data Architect）与 Requirements |
-| 情感或立场定义问题 | Sentiment Expert |
-| 财经解释问题 | Finance Expert |
-| 数据建模问题 | Data Architect |
-| 系统设计问题 | Solution Architect |
+| Collector/CLEAN schema、lineage、identity | Data Architect（按需） |
+| cleaning rule/acceptance 问题 | Orchestrator（contract owner）；cross-cutting 时 Solution Architect |
 | 实现 Bug | Developer |
-| 测试设计问题 | QA |
-| 真实数据表现问题 | 进入研究循环（research → experiment → expert reconsideration） |
+| 测试设计/fixture Bug | QA |
+| 可能破坏财经原意 | Finance Expert（仅反例检查） |
+| 可能破坏未来 sentiment/stance 信息 | Sentiment Expert（仅信息保真检查） |
+| 真实数据未知模式 | 回到 contract/QA，必要时研究或实验 |
+
+不得让 Developer 用 patch 掩盖错误 contract。
 
 ## Two Repair Rule
 
-同一根因经过**两轮局部 Developer 修复**仍然失败：
+同一根因经过两轮局部 Developer 修复仍失败：停止 patch，记录 Root Cause，返回 contract、rule 或 architecture owner。结构性问题不得继续堆叠局部修复。
 
-1. 停止继续 patch。
-2. 创建 Root Cause 记录（写入当前 Round 文档与 `docs/decisions/`）。
-3. 返回需求层或架构层重新处理。
+## Data safety and semantic ignorance
 
-目的：防止用补丁掩盖结构性问题。
+- RAW 只读；任何派生输出都能通过 lineage + cleaning version 重建。
+- 每个 normalize/reject/drop/deduplicate 都有机器可读 rule/reason。
+- DataClean 只能依据结构、编码、空值、确定性文本噪声和 exact identity 作决定，禁止依据看多/看空、情绪、行动意图或股票价值作决定。
 
 ## User Decision Gate
 
-只有以下问题才要求用户介入：
+只有改变项目边界、永久丢弃一类原始证据、破坏历史 schema 兼容、或存在无法通过实验解决的重大成本/效果取舍时才请求用户。普通实现选择不触发。
 
-- 会改变研究目标。
-- 会永久丢弃一类潜在信号。
-- 两种方案对应不同投资研究口径。
-- 成本/效果存在重大且无法通过实验解决的取舍。
-- 会破坏历史数据兼容性。
+## Round Start
 
-普通技术实现问题不得频繁请求用户。
-
-## Round Start 权限（治理补充）
-
-新 Round 的创建只属于 Program Orchestrator，且只能通过 canonical ROUND_START_TRIGGER 转移执行。完整规则（三类 Trigger、MUST 语义、CREATE_ROUND 职责）见 `state-machine.md`，本文件不复制。
-
-- 用户明确要求启动研发即构成合法 Trigger（USER_TRIGGER），用户不需要手工创建 Round 文件。
-- 其他角色无权创建 Round。
-- 无合法 Trigger 时保持 NO_ACTIVE_ROUND，正常停止，不得自行启动研发。
-- Phase 0 Bootstrap 本身不是 Trigger。
-
-## 相关契约
-
-- 证据契约：`contracts/evidence-contract.md`
-- 能力契约：`contracts/capability-contract.md`
-- 交接契约：`contracts/handoff-contract.md`
+只有 Orchestrator 创建 Round。用户明确要求开始一个具体 Round、已接受 Round 的 approved next question、或 Decision Log 中 `APPROVED_FOR_NEXT_ROUND` 的具体问题，构成合法 trigger。无 trigger 时保持 `NO_ACTIVE_ROUND`；有 trigger 时必须初始化 `PLANNED` Round。

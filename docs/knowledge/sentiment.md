@@ -1,35 +1,7 @@
-# Sentiment Knowledge
+# Sentiment Knowledge — Archived Bootstrap Scope
 
-## Purpose
+状态：**OUT_OF_SCOPE_FOR_DATACLEAN**（2026-08-11）
 
-积累情绪与立场识别相关的领域知识：sentiment、stance、emotion、action intent 的区分；标签设计、标注规范、Golden Set、错误分类体系与升级路线。
-维护者：Sentiment and Stance Expert。
+sentiment、stance、emotion、action intent 的标签、标注规范、Golden Set、模型和评估属于下游 DataLabel / Sentiment / Analyze。本文件不再积累这些资产，也不得作为 DataClean cleaning/drop 的依据。
 
-## Evidence Rules
-
-- 每条知识必须标注 Evidence Level（CONFIRMED / PROVISIONAL / HYPOTHESIS / REJECTED）。
-- 标签定义变更必须带样本证据（Golden Set 或人工复核）。
-- 反例与边界样本必须保留。
-- 初始条目全部为 PROVISIONAL。
-
-## Known Initial Assumptions（全部 PROVISIONAL）
-
-- sentiment（情绪）、stance（立场）、emotion（情感）、action intent（行为意图）是四个不同的概念，必须分开建模与评估。
-- 模型 confidence（置信度）不等于情绪强度；语言正负不等于交易立场（BUY/HOLD/SELL）。
-- 反讽、否定、转折、短文本会系统性破坏朴素词典/规则方法。
-- 引用他人内容与作者自己的评论必须分离处理。
-- 无法确定的样本应输出 UNCERTAIN 而非强行分类。
-- 存在「疑似机器人/水军」内容，其语言模式与真实散户不同。
-
-## Open Questions
-
-- 立场标签集（看多/看空/观望 + UNCERTAIN？）如何定义才能支撑研究目标？
-- 反讽检测采用什么路线（规则、模型、人工标注补充）？
-- Golden Set 的规模、来源与标注一致性流程如何设计？
-- 错误分类体系（Error Taxonomy）的层级如何划分？
-
-## 维护记录
-
-| 日期 | 变更 | 级别 |
-| --- | --- | --- |
-| 2026-08-07 | 初始化：仅登记初始假设与开放问题 | PROVISIONAL |
+DataClean 内唯一允许的 sentiment specialist 输入是：某个 cleaning operation 是否破坏未来分析可能需要的表面信息。该输入必须以具体 before/after 反例进入当前 Round regression，不执行分类。参见 `docs/agent-system/roles/sentiment-expert.md`。

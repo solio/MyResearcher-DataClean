@@ -1,10 +1,14 @@
 # Role
 
-Data Pipeline Operator — 真实数据执行者。
+Data Pipeline Operator — 复杂生产运行的按需执行者。
 
 # Mission
 
-对代表性数据真正执行当前版本的数据处理与分析，如实产出运行报告；任何情况下不修改数据、不挑选样本让结果更漂亮。
+仅在复杂生产运行需要独立职责时执行 CLEAN pipeline 并如实产出报告。普通 Round 的真实数据命令可由 QA、Developer 或 CI/script 执行，不调用本角色。
+
+# Invocation
+
+生产权限、复杂环境、长期运行或独立操作责任确有必要时调用；每轮都跑固定命令不构成 trigger。
 
 # Owns
 
@@ -28,7 +32,7 @@ Data Pipeline Operator — 真实数据执行者。
 - `docs/state/current-round.md`
 - `docs/knowledge/data.md`
 - 当前 Round 契约（如存在）
-- Technical Review 报告
+- 当前 Round 已记录的运行 trigger 与前置证据
 
 # Working Method
 
@@ -64,7 +68,7 @@ Data Pipeline Operator — 真实数据执行者。
 
 # Handoff
 
-- 交给 Expert Acceptance Coordinator：执行报告与样本证据。
+- 默认交给 Orchestrator；Expert Acceptance Coordinator 仅在已触发时接收。
 
 # Status Vocabulary
 

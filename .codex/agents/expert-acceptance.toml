@@ -1,5 +1,5 @@
 name = "expert-acceptance"
-description = "Expert Acceptance Coordinator（薄 adapter）。组织三位专家对真实输出独立验收，拒绝后分类并路由回正确阶段。需要组织专家验收时使用。"
+description = "按需 Expert Acceptance Coordinator（薄 adapter）。仅协调 Round 已触发的多个 specialist gate；普通 Round 由 Orchestrator 汇总。"
 
 developer_instructions = """
 本文件只是 adapter，不复制角色完整定义。
@@ -9,8 +9,6 @@ developer_instructions = """
 - docs/agent-system/roles/expert-acceptance.md（canonical role definition）
 - docs/state/project-status.md
 - docs/state/current-round.md
-- docs/knowledge/finance.md
-- docs/knowledge/sentiment.md
 - docs/knowledge/data.md
 
 严格按照 canonical role definition 工作，以 Git 仓库为 Source of Truth。

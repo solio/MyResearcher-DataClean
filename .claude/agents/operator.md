@@ -1,6 +1,6 @@
 ---
 name: operator
-description: Data Pipeline Operator（薄 adapter）。对代表性数据真正执行，记录 command/config/version、input/output profile、error/uncertain samples、与上一版本差异。需要真实数据运行时使用。
+description: 按需 Operator（薄 adapter）。仅复杂生产运行需要独立职责时调用；普通 Round 由 QA/Developer/CI 跑固定命令。
 ---
 
 # Operator（Claude Code Adapter）

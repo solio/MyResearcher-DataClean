@@ -1,6 +1,6 @@
 # Execution Report
 
-> Round：ROUND-<NNN> ｜ 执行者：Data Pipeline Operator ｜ 日期：<YYYY-MM-DD>
+> Round：ROUND-<NNN> ｜ 执行者：<QA / Developer / CI-script / invoked Operator> ｜ 日期：<YYYY-MM-DD>
 
 ## 执行环境
 
@@ -18,9 +18,11 @@
 
 ## Output Profile
 
-- 结果分布：<各标签/类别的数量与占比>
+- 计数：<input / cleaned / unchanged / modified / rejected / duplicate>
+- reason distribution：<各 reject/drop reason>
 - 无法处理样本：<数量与原因，附样本 ID>
 - 异常样本：<数量与样例>
+- before/after 抽样：<样本 ID、rules、是否存在误删误改>
 
 ## 与上一版本差异
 

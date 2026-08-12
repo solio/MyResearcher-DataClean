@@ -8,3 +8,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# ROUND-003 real pilot payloads are local/controlled data artifacts; do not commit
+# raw forum text or author-linked records to the source repository. Keep the
+# non-sensitive profile summary and its evidence in Git.
+artifacts/round-003/pilot-300.jsonl
+artifacts/round-003/pilot-300.csv

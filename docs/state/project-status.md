@@ -1,12 +1,18 @@
 # Project Status
 
-状态：**ROUND_001_QA_PASS / REAL_DATA_BLOCKED**
+状态：**NO_ACTIVE_ROUND / ROUND_002_CLOSED / E0_BLOCKED_NO_GOLDEN_LABELS**
 
-- 当前仍是 ROUND-001；没有创建新 Round、Phase、workflow 或 governance layer。
-- 旧 exact-content rejection、meaning-bearing HTML 丢失与 rejection-lineage 缺口已在本 Round correction 中修正。
-- 旧 QA PASS 与 risk-based Technical Review PASS 已 supersede；新 QA correction 与 risk-based Technical Review correction 均 PASS。
-- CAP-001 以修正后 AC-1–AC-7 证据恢复 `TESTED`，未冒充 `DATA_VALIDATED`。
-- 真实、静止 Collector SQLite 已成功做只读 DataClean 探针，但上游运行因 `SPEC_MISMATCH` 仅保留 failure evidence 且 observations 为 0。AC-8 因无可抽样的真实 observation records 仍 blocked；这是当前唯一 blocker。
+- ROUND-002 的 dataset 与 experiment infrastructure 已满足 AC-1--AC-8 并关闭。
+- ROUND-001 deterministic cleaner 保持 CAP-001 `TESTED`；其真实内容 AC-8 仍因 0 observations 未完成。
+- ROUND-002 新增 CAP-002 `TESTED`：deterministic sampling、versioned annotation、
+  group-aware split、metrics、artifact provenance 与 E0 runner。
+- Core QA 为 `QA_PASS`；risk-based Technical Review 修复复验为
+  `REVIEW_PASS_REVALIDATION`。首次 `REVIEW_BLOCKED` 永久保留为修复历史。
+- 研究决策保持冻结：`KEEP/EXCLUDE/REVIEW` + multi-label reasons，registry 仅 E0--E3，
+  E1--E3 declaration-only，E4 未实现。
+- 当前无真实 human golden labels且可见 Collector DB 为 0 observations；E0 精确
+  `BLOCKED_NO_GOLDEN_LABELS`，未生成 predictions/metrics，不声称 `DATA_VALIDATED`。
+- 未创建 ROUND-003 或其他新 Round。
 
 维护者：Program Orchestrator
-最近更新：2026-08-11
+最近更新：2026-08-12

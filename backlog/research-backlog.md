@@ -24,3 +24,11 @@
 | RB-010 | 热度/多空分歧/拥挤度 | Analyze | TRANSFERRED |
 
 状态：`CANDIDATE` / `IN_QUEUE` / `IN_ROUND` / `DONE` / `REJECTED` / `TRANSFERRED`。
+
+## ROUND-002 close note
+
+ROUND-002 没有新增 RAW -> CLEAN backlog 路线。其剩余事实是上游可见 Collector DB 为
+0 observations，以及缺少 human-owned annotation guideline/review authorization 与真实
+human golden labels；这些不是本表的 DataClean 清洗候选，已作为 evidence-backed
+`RESEARCH_QUESTION` 记录在 `docs/rounds/ROUND-002/completion-report.md`，不会被误写成
+新模型或新 Round。

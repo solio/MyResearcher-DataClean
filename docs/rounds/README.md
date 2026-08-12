@@ -1,10 +1,11 @@
 # Rounds
 
-- `ROUND-001/` — Collector Input Contract & Minimal Cleaning Baseline（active）
+- `ROUND-001/` — Collector Input Contract & Minimal Cleaning Baseline（历史：QA_PASS / REAL_DATA_BLOCKED）
+- `ROUND-002/` — Dataset & Experiment Infrastructure（CLOSED；E0_BLOCKED_NO_GOLDEN_LABELS）
 
 Round 档案存放目录。
 
-当前状态以 `docs/state/current-round.md` 为准；ROUND-001 已启动。
+当前状态以 `docs/state/current-round.md` 为准；当前没有 active Round。
 
 每个 Round 在这里建立 `ROUND-<NNN>/` 子目录，最少包含：
 

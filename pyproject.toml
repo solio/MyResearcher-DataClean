@@ -7,7 +7,7 @@ name = "myresearcher-dataclean"
 version = "0.1.0"
 description = "Deterministic, traceable RAW to CLEAN baseline for MyResearcher Collector data"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["scikit-learn>=1.8,<2"]
 
 [project.scripts]
 myresearcher-dataclean = "myresearcher_dataclean.cli:main"

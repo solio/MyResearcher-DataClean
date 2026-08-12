@@ -18,6 +18,7 @@
 | D-010 | 2026-08-11 | ROUND-001 的 record identity 只基于 Collector immutable `observation_id`；exact-content key 仅是 relationship/group，不用于 reject 不同 observation | content equality 不等于 observation occurrence/identity equality；按内容驱逐会不可逆地丢失 source item、occurrence 与 lineage | ACTIVE | CONFIRMED（Collector schema CODE_INSPECTION + EXTERNAL_REVIEW） |
 | D-011 | 2026-08-11 | HTML normalization 对未证明安全的 markup preserve-by-default，`del/s/strike` 保留可恢复 markers，不建 rich-text AST | 只保留内部文本会消除删除/划除关系；可见 markers 是 ROUND-001 内最小可回放方案 | ACTIVE | CONFIRMED（EXTERNAL_REVIEW + CODE_INSPECTION） |
 | D-012 | 2026-08-11 | 已通过 validation 的 non-CLEAN outcome 保留 full available Collector lineage，`INVALID_RECORD` 仅作 best-effort | validation 后已拥有完整 lineage 事实，不应因 cleaning outcome 丢失；无效输入则不能补造 | ACTIVE | CONFIRMED（EXTERNAL_REVIEW + CODE_INSPECTION） |
+| D-013 | 2026-08-12 | ROUND-002 的 sample、annotation dataset、split、experiment、prediction 使用 immutable content-addressed artifacts；golden 与 prediction 分离，teacher 仅 candidate，split 以 observation identity 与 exact-content group 闭包防 leakage | 保留从 prediction 回到 Collector evidence 的可验证链，防止 content equality 丢 observation、teacher/prediction 被误作 truth，及 train/test leakage；不替 Research Owner 制定 annotation/teacher/review 政策 | ACTIVE | CONFIRMED（USER_FROZEN_DECISIONS + ROUND-001 CODE_INSPECTION） |
 
 ## 追加记录规则
 

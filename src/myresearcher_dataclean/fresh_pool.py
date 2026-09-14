@@ -26,6 +26,9 @@ from .normalization import normalize_text
 from .pipeline import canonical_json_bytes
 
 FRESH_POOL_VERSION = "round-004.fresh-pool.v2"
+# Keep source-selection ordering compatible with v1 while v2 changes only the
+# model-facing text representation.
+SELECTION_VERSION = "round-004.fresh-pool.v1"
 DEFAULT_SEED = 20260914
 DEFAULT_SIZE = 2000
 TITLE_ONLY_MAX_LENGTH = 38  # equivalent to the requested normalized length <39
@@ -96,6 +99,7 @@ class _ForumVisibleTextExtractor(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self._invisible_depth = 0
+        self.had_markup = False
 
     def _newline(self) -> None:
         if self.parts and self.parts[-1] != "\n":
@@ -104,6 +108,7 @@ class _ForumVisibleTextExtractor(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         del attrs
         lowered = tag.lower()
+        self.had_markup = True
         if self._invisible_depth:
             if lowered in _INVISIBLE_TAGS:
                 self._invisible_depth += 1
@@ -118,11 +123,13 @@ class _ForumVisibleTextExtractor(HTMLParser):
         self, tag: str, attrs: list[tuple[str, str | None]]
     ) -> None:
         del attrs
+        self.had_markup = True
         if not self._invisible_depth and tag.lower() in _BLOCK_TAGS:
             self._newline()
 
     def handle_endtag(self, tag: str) -> None:
         lowered = tag.lower()
+        self.had_markup = True
         if self._invisible_depth:
             if lowered in _INVISIBLE_TAGS:
                 self._invisible_depth -= 1
@@ -144,10 +151,16 @@ class _ForumVisibleTextExtractor(HTMLParser):
 def _forum_visible_text(value: str) -> str:
     """Return text visible to a reader, with HTML structure removed."""
 
+    return _forum_visible_text_details(value)[0]
+
+
+def _forum_visible_text_details(value: str) -> tuple[str, bool]:
+    """Return visible text plus whether an HTML tag was encountered."""
+
     parser = _ForumVisibleTextExtractor()
     parser.feed(value)
     parser.close()
-    return parser.result()
+    return parser.result(), parser.had_markup
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -163,7 +176,7 @@ def _sha256_path(path: Path) -> str:
 
 
 def _stable_key(seed: int, namespace: str, value: str) -> bytes:
-    return hashlib.sha256(f"{FRESH_POOL_VERSION}|{seed}|{namespace}|{value}".encode()).digest()
+    return hashlib.sha256(f"{SELECTION_VERSION}|{seed}|{namespace}|{value}".encode()).digest()
 
 
 def _exact_content_group(title: Any, content: Any) -> str:
@@ -242,10 +255,11 @@ def _effective_raw_text(row: Mapping[str, Any]) -> tuple[str, str]:
 def _normalized_model_text(raw_text: str, text_source: str) -> tuple[str, bool]:
     """Normalize visible text and report whether HTML structure was removed."""
 
-    visible_text = (
-        _forum_visible_text(raw_text) if text_source == "CONTENT" else raw_text
-    )
-    return normalize_text(visible_text).text, visible_text != raw_text
+    if text_source == "CONTENT":
+        visible_text, had_markup = _forum_visible_text_details(raw_text)
+    else:
+        visible_text, had_markup = raw_text, False
+    return normalize_text(visible_text).text, had_markup
 
 
 def _text_is_word_bearing(value: str) -> bool:
@@ -292,7 +306,7 @@ def _load_covered_normalized_groups(
             continue
         value = content if _is_nonempty(content) else title
         text_source = "CONTENT" if _is_nonempty(content) else "TITLE_ONLY"
-        model_text, _ = _normalized_model_text(str(value or ""), text_source)
+        model_text = normalize_text(str(value or "")).text
         if model_text:
             normalized.add(_normalized_group(model_text))
     return normalized
@@ -346,7 +360,7 @@ def _representatives(
     groups: Mapping[str, Sequence[dict[str, Any]]], seed: int
 ) -> list[dict[str, Any]]:
     representatives: list[dict[str, Any]] = []
-    for normalized_group, rows in groups.items():
+    for selection_group, rows in groups.items():
         representative = min(
             rows,
             key=lambda row: _stable_key(
@@ -356,7 +370,7 @@ def _representatives(
             ),
         )
         candidate = dict(representative)
-        candidate["_normalized_group"] = normalized_group
+        candidate["_selection_group"] = selection_group
         representatives.append(candidate)
     return representatives
 
@@ -382,7 +396,7 @@ def _select_representatives(
         for row in rows:
             key = (
                 str(row["_text_source"]),
-                str(row["_length_bucket"]),
+                str(row["_selection_length_bucket"]),
                 str(row["_month_bucket"]),
             )
             strata[key].append(row)
@@ -396,7 +410,7 @@ def _select_representatives(
                 key=lambda row: _stable_key(
                     seed,
                     f"SELECT|{stock}|{key}",
-                    str(row["_normalized_group"]),
+                    str(row["_selection_group"]),
                 ),
             )
             selected.extend(ordered[:quota])
@@ -484,26 +498,28 @@ def build_fresh_pool(
         content = original.get("content")
         body_present = _is_nonempty(content)
         raw_text, text_source = _effective_raw_text(original)
-        normalized, html_cleaned = _normalized_model_text(raw_text, text_source)
+        raw_normalized = normalize_text(raw_text).text
+        normalized, html_had_markup = _normalized_model_text(raw_text, text_source)
+        html_cleaned = html_had_markup and raw_normalized != normalized
         prefilter_exact_group = _exact_content_group(
             title,
             content if body_present else title,
         )
-        prefilter_normalized_group = _normalized_group(normalized)
+        prefilter_selection_group = _normalized_group(raw_normalized)
         if (
             prefilter_exact_group in covered_groups
-            or prefilter_normalized_group in covered_normalized_groups
+            or prefilter_selection_group in covered_normalized_groups
         ):
             filter_counts[
                 "fresh_rows_matching_covered_group_before_text_filters"
             ] += 1
-        if not body_present and len(normalized) > TITLE_ONLY_MAX_LENGTH:
+        if not body_present and len(raw_normalized) > TITLE_ONLY_MAX_LENGTH:
             filter_counts["excluded_title_only_39_40_or_longer"] += 1
             continue
-        if not normalized:
+        if not raw_normalized:
             filter_counts["excluded_empty_after_normalize"] += 1
             continue
-        reason = _fragment_reason(normalized)
+        reason = _fragment_reason(raw_normalized)
         if reason == "PURE_PUNCTUATION":
             filter_counts["excluded_pure_punctuation"] += 1
             continue
@@ -515,8 +531,8 @@ def build_fresh_pool(
             continue
 
         exact_group = prefilter_exact_group
-        normalized_group = prefilter_normalized_group
-        if exact_group in covered_groups or normalized_group in covered_normalized_groups:
+        cleaned_group = _normalized_group(normalized)
+        if exact_group in covered_groups or prefilter_selection_group in covered_normalized_groups:
             filter_counts["excluded_human_covered_content_group"] += 1
             continue
 
@@ -524,11 +540,14 @@ def build_fresh_pool(
         candidate["_model_text"] = normalized
         candidate["_text_source"] = text_source
         candidate["_length_bucket"] = _length_bucket(normalized)
+        candidate["_selection_length_bucket"] = _length_bucket(raw_normalized)
         candidate["_month_bucket"] = _month_bucket(original.get("published_at"))
         candidate["_exact_content_group"] = exact_group
-        candidate["_normalized_group"] = normalized_group
+        candidate["_selection_group"] = prefilter_selection_group
+        candidate["_normalized_group"] = cleaned_group
+        candidate["_html_had_markup"] = html_had_markup
         candidate["_html_cleaned"] = html_cleaned
-        groups[normalized_group].append(candidate)
+        groups[candidate["_selection_group"]].append(candidate)
 
     for name in (
         "excluded_round003_pilot_source_item",
@@ -545,7 +564,14 @@ def build_fresh_pool(
     filter_counts["normalized_duplicate_rows_removed"] = sum(
         max(0, len(values) - 1) for values in groups.values()
     )
-    filter_counts["eligible_distinct_normalized_groups"] = len(groups)
+    filter_counts["eligible_distinct_selection_groups"] = len(groups)
+    filter_counts["eligible_distinct_cleaned_model_text_groups"] = len(
+        {
+            row["_normalized_group"]
+            for values in groups.values()
+            for row in values
+        }
+    )
     eligible_rows_with_html_cleaned_content = sum(
         bool(row.get("_html_cleaned"))
         for values in groups.values()
@@ -553,6 +579,8 @@ def build_fresh_pool(
     )
     representatives = _representatives(groups, seed)
     selected_rows = _select_representatives(representatives, target_size, seed)
+    if len({row["_normalized_group"] for row in selected_rows}) != target_size:
+        raise ValueError("HTML extraction created a duplicate selected model_text group")
     selected = [
         _output_record(row, collector_db_sha256)
         for row in sorted(
@@ -568,11 +596,14 @@ def build_fresh_pool(
         "profile_version": FRESH_POOL_VERSION,
         "seed": seed,
         "target_size": target_size,
-        "selection_unit": "one representative per normalized model_text group",
+        "selection_unit": "existing v1 representative set retained; v2 only replaces model_text representation",
         "semantic_labels_present": False,
         "model_predictions_present": False,
         "filter_counts": dict(sorted(filter_counts.items())),
         "selected_count": len(selected),
+        "html_tag_records_seen_in_selected_pool": sum(
+            bool(row.get("_html_had_markup")) for row in selected_rows
+        ),
         "html_cleaned_content_records_in_eligible_rows": eligible_rows_with_html_cleaned_content,
         "html_cleaned_content_records_in_selected_pool": sum(
             bool(row.get("_html_cleaned")) for row in selected_rows
@@ -590,7 +621,7 @@ def build_fresh_pool(
                 "pure punctuation/symbols",
                 "obvious trailing-open-punctuation fragment",
             ],
-            "deduplication": "exact normalized model_text only; representative chosen by seeded stable hash",
+            "deduplication": "v1 selection identity retained; cleaned model_text groups are re-hashed and must remain unique",
             "stratification": "stock-proportional quotas, then proportional source/length/month strata with deterministic largest remainders",
         },
         "stock_name_source": "fixed mapping for the 16 configured Collector stock codes; unknown codes remain empty",

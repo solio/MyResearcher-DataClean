@@ -14,3 +14,7 @@ build/
 # non-sensitive profile summary and its evidence in Git.
 artifacts/round-003/pilot-300.jsonl
 artifacts/round-003/pilot-300.csv
+
+# ROUND-004 fresh pool contains raw forum text/author-linked rows; retain it
+# locally for downstream hand-off without committing the payload.
+artifacts/round-004/fresh-pool-2000.jsonl

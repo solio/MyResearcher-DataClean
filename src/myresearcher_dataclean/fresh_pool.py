@@ -17,6 +17,7 @@ import json
 import sqlite3
 import sys
 from collections import defaultdict
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -24,7 +25,7 @@ from .collector_sqlite import CollectorContractError, read_collector_posts
 from .normalization import normalize_text
 from .pipeline import canonical_json_bytes
 
-FRESH_POOL_VERSION = "round-004.fresh-pool.v1"
+FRESH_POOL_VERSION = "round-004.fresh-pool.v2"
 DEFAULT_SEED = 20260914
 DEFAULT_SIZE = 2000
 TITLE_ONLY_MAX_LENGTH = 38  # equivalent to the requested normalized length <39
@@ -51,6 +52,102 @@ _STOCK_NAMES = {
 _OPENING_PUNCTUATION = frozenset(
     ",，、:：;；([{（［｛《「『“‘"
 )
+_BLOCK_TAGS = frozenset(
+    {
+        "address",
+        "article",
+        "aside",
+        "blockquote",
+        "br",
+        "div",
+        "figcaption",
+        "figure",
+        "footer",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "li",
+        "main",
+        "nav",
+        "ol",
+        "p",
+        "section",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "tr",
+        "ul",
+    }
+)
+_INVISIBLE_TAGS = frozenset({"script", "style", "noscript", "template"})
+
+
+class _ForumVisibleTextExtractor(HTMLParser):
+    """Extract visible forum text while discarding markup and attributes."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._invisible_depth = 0
+
+    def _newline(self) -> None:
+        if self.parts and self.parts[-1] != "\n":
+            self.parts.append("\n")
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        lowered = tag.lower()
+        if self._invisible_depth:
+            if lowered in _INVISIBLE_TAGS:
+                self._invisible_depth += 1
+            return
+        if lowered in _INVISIBLE_TAGS:
+            self._invisible_depth = 1
+            return
+        if lowered in _BLOCK_TAGS:
+            self._newline()
+
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        del attrs
+        if not self._invisible_depth and tag.lower() in _BLOCK_TAGS:
+            self._newline()
+
+    def handle_endtag(self, tag: str) -> None:
+        lowered = tag.lower()
+        if self._invisible_depth:
+            if lowered in _INVISIBLE_TAGS:
+                self._invisible_depth -= 1
+            return
+        if lowered in _BLOCK_TAGS:
+            self._newline()
+
+    def handle_data(self, data: str) -> None:
+        if not self._invisible_depth:
+            self.parts.append(data)
+
+    def handle_comment(self, data: str) -> None:
+        del data
+
+    def result(self) -> str:
+        return "".join(self.parts)
+
+
+def _forum_visible_text(value: str) -> str:
+    """Return text visible to a reader, with HTML structure removed."""
+
+    parser = _ForumVisibleTextExtractor()
+    parser.feed(value)
+    parser.close()
+    return parser.result()
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -142,6 +239,15 @@ def _effective_raw_text(row: Mapping[str, Any]) -> tuple[str, str]:
     return (str(title) if title is not None else ""), "TITLE_ONLY"
 
 
+def _normalized_model_text(raw_text: str, text_source: str) -> tuple[str, bool]:
+    """Normalize visible text and report whether HTML structure was removed."""
+
+    visible_text = (
+        _forum_visible_text(raw_text) if text_source == "CONTENT" else raw_text
+    )
+    return normalize_text(visible_text).text, visible_text != raw_text
+
+
 def _text_is_word_bearing(value: str) -> bool:
     return any(character.isalnum() or "\u3400" <= character <= "\u9fff" for character in value)
 
@@ -185,7 +291,8 @@ def _load_covered_normalized_groups(
         if raw_group not in covered_groups:
             continue
         value = content if _is_nonempty(content) else title
-        model_text = normalize_text(str(value or "")).text
+        text_source = "CONTENT" if _is_nonempty(content) else "TITLE_ONLY"
+        model_text, _ = _normalized_model_text(str(value or ""), text_source)
         if model_text:
             normalized.add(_normalized_group(model_text))
     return normalized
@@ -377,7 +484,7 @@ def build_fresh_pool(
         content = original.get("content")
         body_present = _is_nonempty(content)
         raw_text, text_source = _effective_raw_text(original)
-        normalized = normalize_text(raw_text).text
+        normalized, html_cleaned = _normalized_model_text(raw_text, text_source)
         prefilter_exact_group = _exact_content_group(
             title,
             content if body_present else title,
@@ -420,6 +527,7 @@ def build_fresh_pool(
         candidate["_month_bucket"] = _month_bucket(original.get("published_at"))
         candidate["_exact_content_group"] = exact_group
         candidate["_normalized_group"] = normalized_group
+        candidate["_html_cleaned"] = html_cleaned
         groups[normalized_group].append(candidate)
 
     for name in (
@@ -438,6 +546,11 @@ def build_fresh_pool(
         max(0, len(values) - 1) for values in groups.values()
     )
     filter_counts["eligible_distinct_normalized_groups"] = len(groups)
+    eligible_rows_with_html_cleaned_content = sum(
+        bool(row.get("_html_cleaned"))
+        for values in groups.values()
+        for row in values
+    )
     representatives = _representatives(groups, seed)
     selected_rows = _select_representatives(representatives, target_size, seed)
     selected = [
@@ -460,6 +573,10 @@ def build_fresh_pool(
         "model_predictions_present": False,
         "filter_counts": dict(sorted(filter_counts.items())),
         "selected_count": len(selected),
+        "html_cleaned_content_records_in_eligible_rows": eligible_rows_with_html_cleaned_content,
+        "html_cleaned_content_records_in_selected_pool": sum(
+            bool(row.get("_html_cleaned")) for row in selected_rows
+        ),
         "selected_stock_distribution": _distribution(selected, "stock_code"),
         "selected_month_distribution": _distribution(selected, "published_at_month"),
         "selected_text_source_distribution": _distribution(selected, "text_source"),

@@ -8,10 +8,51 @@ from pathlib import Path
 from myresearcher_dataclean.fresh_pool import (
     DEFAULT_SEED,
     _exact_content_group,
+    _forum_visible_text,
     build_fresh_pool,
     run,
 )
-from myresearcher_dataclean.pipeline import canonical_json_bytes
+
+
+def test_forum_html_attributes_are_removed_but_visible_text_and_breaks_remain() -> None:
+    raw = (
+        '<div class="outer" data-state="open"><span class="name">思源</span>'
+        '<a href="https://example.test/002028">电气</a></div>'
+        '<p>第二行</p><script>hidden()</script><style>.x{display:none}</style>'
+    )
+
+    visible = _forum_visible_text(raw)
+
+    assert "思源" in visible and "电气" in visible and "第二行" in visible
+    assert "hidden" not in visible and "display:none" not in visible
+    assert "<" not in visible and "href=" not in visible and "class=" not in visible
+    assert "data-state" not in visible
+    assert "\n" in visible
+
+
+def test_build_keeps_raw_content_and_uses_visible_model_text_for_long_body() -> None:
+    raw_content = (
+        '<div class="outer"><span data-kind="stock">思源</span>'
+        '<a href="https://example.test/002028">电气</a></div>'
+        '<p>' + ("完整正文" * 20) + "</p><script>do_not_emit()</script>"
+    )
+    records, _ = build_fresh_pool(
+        [post("html", stock_code="002028", title="带标记正文", content=raw_content)],
+        legacy_source_item_ids=set(),
+        pilot_source_item_ids=set(),
+        covered_groups=set(),
+        pilot_records=[],
+        collector_db_sha256="b" * 64,
+        target_size=1,
+        seed=DEFAULT_SEED,
+    )
+
+    assert len(records) == 1
+    assert records[0]["content"] == raw_content
+    assert "思源电气" in records[0]["model_text"]
+    assert "do_not_emit" not in records[0]["model_text"]
+    assert "<" not in records[0]["model_text"]
+    assert records[0]["text_length"] > 40
 
 
 def post(
@@ -106,7 +147,9 @@ def test_fresh_pool_filters_deduplicates_and_is_deterministic() -> None:
     assert profile["filter_counts"]["excluded_human_covered_content_group"] == 1
     assert profile["filter_counts"]["normalized_duplicate_rows_removed"] == 1
     assert profile["selected_count"] == 4
-    assert any(record["source_item_id"] == "body-long" for record in first)
+    body_long = next(record for record in first if record["source_item_id"] == "body-long")
+    assert body_long["content"] == "正文" * 40
+    assert body_long["text_length"] == 80
 
 
 def _create_posts_db(path: Path, rows: list[dict]) -> None:

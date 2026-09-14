@@ -94,6 +94,30 @@ _OBSERVATION_FIELDS = (
     "drift_from_observation_id",
 )
 
+# ``collector.db`` is the Collector's mutable list/backfill table.  It is not
+# the canonical ``source_item_observations`` contract consumed by
+# ``read_collector_records`` above, but ROUND-004's source inventory needs a
+# deliberately narrow, read-only view of it.  Keep this adapter separate so
+# callers cannot accidentally treat list rows as canonical observations.
+_POST_FIELDS = (
+    "source",
+    "source_item_id",
+    "stock_code",
+    "title",
+    "content",
+    "author_id",
+    "author_name",
+    "published_at",
+    "url",
+    "read_count",
+    "reply_count",
+    "like_count",
+    "forward_count",
+    "created_at",
+    "updated_at",
+)
+_POSTS_REQUIRED_COLUMNS = set(_POST_FIELDS)
+
 
 def _columns(connection: sqlite3.Connection, table: str) -> set[str]:
     try:
@@ -237,5 +261,44 @@ def read_collector_records(database: str | Path) -> list[dict[str, Any]]:
         return records
     except sqlite3.DatabaseError as exc:
         raise CollectorContractError("Collector database read failed") from exc
+    finally:
+        connection.close()
+
+
+def read_collector_posts(database: str | Path) -> list[dict[str, Any]]:
+    """Read the mutable Collector ``posts`` table without write capability.
+
+    This is intentionally a narrow adapter for source-inventory work.  The
+    returned rows do not claim canonical observation lineage and must not be
+    passed to :func:`read_collector_records` or the RAW-to-CLEAN pipeline.
+    """
+
+    path = Path(database)
+    if not path.is_file():
+        raise CollectorContractError(f"Collector database does not exist: {path}")
+    uri = path.resolve().as_uri() + "?mode=ro"
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+    except sqlite3.Error as exc:
+        raise CollectorContractError(
+            f"cannot open Collector posts database read-only: {path}"
+        ) from exc
+    connection.row_factory = sqlite3.Row
+    try:
+        actual = _columns(connection, "posts")
+        missing = sorted(_POSTS_REQUIRED_COLUMNS - actual)
+        if missing:
+            raise CollectorContractError(
+                "Collector table posts is missing columns: " + ", ".join(missing)
+            )
+        try:
+            rows = connection.execute(
+                "SELECT "
+                + ", ".join(_POST_FIELDS)
+                + " FROM posts ORDER BY source, source_item_id"
+            ).fetchall()
+        except sqlite3.DatabaseError as exc:
+            raise CollectorContractError("cannot read Collector posts") from exc
+        return [dict(row) for row in rows]
     finally:
         connection.close()

@@ -10,6 +10,7 @@ import pytest
 from myresearcher_dataclean.collector_sqlite import (
     CollectorContractError,
     read_collector_records,
+    read_collector_posts,
 )
 
 
@@ -192,3 +193,63 @@ def test_requires_collector_scope_lineage(tmp_path: Path) -> None:
 
     with pytest.raises(CollectorContractError, match="scope lineage"):
         read_collector_records(database)
+
+
+def test_reads_mutable_posts_with_narrow_read_only_adapter(tmp_path: Path) -> None:
+    database = tmp_path / "posts.db"
+    connection = sqlite3.connect(database)
+    connection.execute(
+        """CREATE TABLE posts (
+            source TEXT NOT NULL, source_item_id TEXT NOT NULL,
+            stock_code TEXT NOT NULL, title TEXT, content TEXT,
+            author_id TEXT, author_name TEXT, published_at TEXT NOT NULL,
+            url TEXT NOT NULL, read_count INTEGER, reply_count INTEGER,
+            like_count INTEGER, forward_count INTEGER,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            PRIMARY KEY(source, source_item_id)
+        )"""
+    )
+    connection.execute(
+        "INSERT INTO posts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "eastmoney_guba", "post-1", "600519", "标题", "正文",
+            "author-1", "作者", "2026-08-11T01:00:00Z",
+            "https://example.test/post-1", 1, 2, 3, 4,
+            "2026-08-11T02:00:00Z", "2026-08-11T02:00:00Z",
+        ),
+    )
+    connection.commit()
+    connection.close()
+
+    records = read_collector_posts(database)
+
+    assert records == [
+        {
+            "source": "eastmoney_guba",
+            "source_item_id": "post-1",
+            "stock_code": "600519",
+            "title": "标题",
+            "content": "正文",
+            "author_id": "author-1",
+            "author_name": "作者",
+            "published_at": "2026-08-11T01:00:00Z",
+            "url": "https://example.test/post-1",
+            "read_count": 1,
+            "reply_count": 2,
+            "like_count": 3,
+            "forward_count": 4,
+            "created_at": "2026-08-11T02:00:00Z",
+            "updated_at": "2026-08-11T02:00:00Z",
+        }
+    ]
+
+
+def test_posts_adapter_rejects_missing_column(tmp_path: Path) -> None:
+    database = tmp_path / "posts-missing.db"
+    connection = sqlite3.connect(database)
+    connection.execute("CREATE TABLE posts (source TEXT, source_item_id TEXT)")
+    connection.commit()
+    connection.close()
+
+    with pytest.raises(CollectorContractError, match="posts is missing columns"):
+        read_collector_posts(database)
